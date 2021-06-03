@@ -1,14 +1,26 @@
-From xxx Mon Sep 17 00:00:00 2001
+From 728cc0075e5dfdb454ebe6418b63bdffae71ec14 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Martin=20Storsj=C3=B6?= <martin@martin.st>
-Date: Mon, 24 May 2021 05:20:00 -0700
-Subject: [PATCH] [LLD] [COFF] Fix automatic export of symbols from LTO objects
+Date: Mon, 24 May 2021 15:06:56 +0300
+Subject: [PATCH] [LLD] [COFF] Fix autoexport from LTO objects with comdat
+ symbols
+
+Make sure that comdat symbols also have a non-null dummy
+SectionChunk associated.
+
+This requires moving around an existing FIXME regarding comdats in
+LTO.
 
 Differential Revision: https://reviews.llvm.org/D103012
 ---
+ COFF/InputFiles.cpp         | 40 ++++++++++++++++++++-------------
+ test/COFF/export-all-lto.ll | 14 ++++++++++--
+ 2 files changed, 37 insertions(+), 17 deletions(-)
+
 diff --git a/COFF/InputFiles.cpp b/COFF/InputFiles.cpp
+index 9900903bfe7cc..f4abeb4acfb4a 100644
 --- a/COFF/InputFiles.cpp
 +++ b/COFF/InputFiles.cpp
-@@ -503,14 +503,9 @@
+@@ -503,14 +503,9 @@ void ObjFile::handleComdatSelection(
    SectionChunk *leaderChunk = nullptr;
    COMDATType leaderSelection = IMAGE_COMDAT_SELECT_ANY;
  
@@ -26,7 +38,7 @@ diff --git a/COFF/InputFiles.cpp b/COFF/InputFiles.cpp
  
    if ((selection == IMAGE_COMDAT_SELECT_ANY &&
         leaderSelection == IMAGE_COMDAT_SELECT_LARGEST) ||
-@@ -1051,10 +1046,22 @@
+@@ -1051,10 +1046,22 @@ class FakeSection {
    coff_section section;
  };
  
@@ -51,7 +63,7 @@ diff --git a/COFF/InputFiles.cpp b/COFF/InputFiles.cpp
  } // namespace
  
  void BitcodeFile::parse() {
-@@ -1069,9 +1076,9 @@
+@@ -1069,9 +1076,9 @@ void BitcodeFile::parse() {
      Symbol *sym;
      SectionChunk *fakeSC = nullptr;
      if (objSym.isExecutable())
@@ -63,7 +75,7 @@ diff --git a/COFF/InputFiles.cpp b/COFF/InputFiles.cpp
      if (objSym.isUndefined()) {
        sym = symtab->addUndefined(symName, this, false);
      } else if (objSym.isCommon()) {
-@@ -1083,12 +1090,15 @@
+@@ -1083,12 +1090,15 @@ void BitcodeFile::parse() {
        Symbol *alias = symtab->addUndefined(saver.save(fallback));
        checkAndSetWeakAlias(symtab, this, sym, alias);
      } else if (comdatIndex != -1) {
@@ -83,6 +95,7 @@ diff --git a/COFF/InputFiles.cpp b/COFF/InputFiles.cpp
        sym = symtab->addRegular(this, symName, nullptr, fakeSC);
      }
 diff --git a/test/COFF/export-all-lto.ll b/test/COFF/export-all-lto.ll
+index 9d68809a77e07..13620e11d9b93 100644
 --- a/test/COFF/export-all-lto.ll
 +++ b/test/COFF/export-all-lto.ll
 @@ -6,18 +6,28 @@
@@ -116,4 +129,3 @@ diff --git a/test/COFF/export-all-lto.ll b/test/COFF/export-all-lto.ll
  entry:
    ret void
  }
-
