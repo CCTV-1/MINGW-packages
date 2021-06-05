@@ -425,6 +425,8 @@ package_clang() {
   depends=("${MINGW_PACKAGE_PREFIX}-llvm=${pkgver}-${pkgrel}"
            $( ((_clangprefix)) && echo \
              "${MINGW_PACKAGE_PREFIX}-compiler-rt=${pkgver}-${pkgrel}" \
+             "${MINGW_PACKAGE_PREFIX}-crt" \
+             "${MINGW_PACKAGE_PREFIX}-headers" \
              "${MINGW_PACKAGE_PREFIX}-lld=${pkgver}-${pkgrel}" \
              || echo "${MINGW_PACKAGE_PREFIX}-gcc"))
   provides=($( (( _clangprefix )) && echo \
